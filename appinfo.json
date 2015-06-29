@@ -1,0 +1,23 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "nuta.adi@gmail.com",
+    "longName": "Raiselight",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "3",
+    "shortName": "Raiselight",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
+    "uuid": "6f679858-1f02-4ac9-9d75-b24d7e8e4896",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
