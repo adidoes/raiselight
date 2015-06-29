@@ -22,30 +22,25 @@ GFont my_font;
 static Window *top_menu_window;
 SimpleMenuLayer *top_menu_layer;
 
-/*
- * Main window menu
- */
 void top_menu_callback(int index, void *context);
-const SimpleMenuItem top_menu_items[]={
+const SimpleMenuItem top_menu_items[] = {
     {"Toggle backlight", NULL, NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
     {"Set Start", NULL, NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
     {"Set Stop", NULL, NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
 };
 #define num_top_menu_items (sizeof(top_menu_items) / sizeof(*top_menu_items))
 
-const SimpleMenuSection top_menu_sections={.title="Main menu", .items=top_menu_items,
-                                           .num_items=num_top_menu_items};
+const SimpleMenuSection top_menu_sections = {
+    .title="Main menu",
+    .items=top_menu_items,
+    .num_items=num_top_menu_items
+};
 #define num_top_menu_sections 1
-
-
-/****************************************************************************
-* Setting start and stop times
-****************************************************************************/
 
 Window *time_window=NULL;
 TextLayer *time_layer=NULL;
 
-char time_select_text[30];      /* hours : minutes */
+char time_select_text[30];
 int time_select_pointer;
 #define TIME_SELECT_HOURS 1
 #define TIME_SELECT_MINUTES 2
@@ -54,14 +49,13 @@ int time_select_minutes;
 int time_setting;
 #define TIME_START  0
 #define TIME_STOP   1
-char *which[2]={"start", "stop"};
+char *which[2] = {"start", "stop"};
 int start_hour;
 int start_min;
 int stop_hour;
 int stop_min;
 WakeupId start_alarm_id;
 WakeupId stop_alarm_id;
-
 
 void schedule_wakeup (WakeupId *alarm_id, int hour, int min, int which, int which_mem) {
     time_t now;
@@ -81,20 +75,15 @@ void schedule_wakeup (WakeupId *alarm_id, int hour, int min, int which, int whic
     persist_write_int(which_mem, (uint32_t)(*alarm_id));
 }
 
-
 void save_and_initiate_timer (int which) {
-
-
     if (which == TIME_START) {
-	persist_write_int(START_HOUR, (uint32_t)start_hour);
-	persist_write_int(START_MINUTE, (uint32_t)start_min);
-
-	schedule_wakeup(&start_alarm_id, start_hour, start_min, TIME_START, START_ALARM);
-    } else {     /* TIME_STOP */
-	persist_write_int(STOP_HOUR, (uint32_t)stop_hour);
-	persist_write_int(STOP_MINUTE, (uint32_t)stop_min);
-
-	schedule_wakeup(&stop_alarm_id, stop_hour, stop_min, TIME_STOP, STOP_ALARM);
+    	persist_write_int(START_HOUR, (uint32_t)start_hour);
+    	persist_write_int(START_MINUTE, (uint32_t)start_min);
+    	schedule_wakeup(&start_alarm_id, start_hour, start_min, TIME_START, START_ALARM);
+    } else {
+    	persist_write_int(STOP_HOUR, (uint32_t)stop_hour);
+    	persist_write_int(STOP_MINUTE, (uint32_t)stop_min);
+    	schedule_wakeup(&stop_alarm_id, stop_hour, stop_min, TIME_STOP, STOP_ALARM);
     }
 }
 
@@ -116,9 +105,9 @@ static void select_time_handler(ClickRecognizerRef recognizer, void *context) {
     	time_select_pointer = TIME_SELECT_MINUTES;
     } else {
         app_log(APP_LOG_LEVEL_WARNING,
-	        __FILE__,
-	        __LINE__,
-	        "Time selected is '%s'", time_select_text);
+    	        __FILE__,
+    	        __LINE__,
+    	        "Time selected is '%s'", time_select_text);
     	if (time_setting == TIME_START) {
     	    start_hour = time_select_hours;
     	    start_min = time_select_minutes;
@@ -185,23 +174,19 @@ static void time_config_provider(void *context) {
 
 void set_time (int which) {
 
-    /*
-     * Create the base window
-     */
-    if (!time_window)
-	time_window = window_create();
+    if (!time_window) {
+    	time_window = window_create();
+    }
 
-    /*
-     * Create the hours and minutes layers
-     */
-    if (!time_layer)
-	time_layer = text_layer_create(GRect(0, 0,         /* origin */
-	                                     144, 168));         /* size */
+    if (!time_layer) {
+    	time_layer = text_layer_create(GRect(0, 0, 144, 168));
+    }
+
     text_layer_set_font(time_layer, my_font);
     text_layer_set_text_alignment(time_layer, GTextAlignmentCenter);
     layer_add_child(window_get_root_layer(time_window), (Layer *)time_layer);
 
-    time_setting = which;       /* which one we're setting */
+    time_setting = which;
     time_select_pointer = TIME_SELECT_HOURS;
     time_select_hours = (which == TIME_START) ? start_hour : stop_hour;
     time_select_minutes = (which == TIME_START) ? start_min : stop_min;
@@ -236,7 +221,7 @@ void top_menu_callback (int index, void *context) {
         	return;
     }
 
-    window_stack_pop(true);     /* menu window */
+    window_stack_pop(true);
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -293,7 +278,10 @@ static void init(void) {
     Layer *window_layer = window_get_root_layer(window);
     GRect bounds = layer_get_bounds(window_layer);
 
-    text_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, bounds.size.h } });
+    text_layer = text_layer_create((GRect) {
+        .origin = { 0, 0 },
+        .size = { bounds.size.w, bounds.size.h }
+    });
 
     my_font = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
 
@@ -314,36 +302,37 @@ void read_alarm_data (void) {
 
     val = persist_read_int(START_ALARM);
     if (val) {
-	start_alarm_id = (WakeupId)val;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "start_alarm_id=%u", (uint)val);
+    	start_alarm_id = (WakeupId)val;
+    	APP_LOG(APP_LOG_LEVEL_DEBUG, "start_alarm_id=%u", (uint)val);
     }
 
     val = persist_read_int(STOP_ALARM);
     if (val) {
-	stop_alarm_id = (WakeupId)val;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "stop_alarm_id=%u", (uint)val);
+    	stop_alarm_id = (WakeupId)val;
+    	APP_LOG(APP_LOG_LEVEL_DEBUG, "stop_alarm_id=%u", (uint)val);
     }
 
     val = persist_read_int(START_HOUR);
     if (val) {
-	start_hour = (int)val;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "start_hour=%u", (uint)val);
+    	start_hour = (int)val;
+    	APP_LOG(APP_LOG_LEVEL_DEBUG, "start_hour=%u", (uint)val);
     }
     val = persist_read_int(START_MINUTE);
     if (val) {
-	start_min = (int)val;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "start_min=%u", (uint)val);
+    	start_min = (int)val;
+    	APP_LOG(APP_LOG_LEVEL_DEBUG, "start_min=%u", (uint)val);
     }
 
     val = persist_read_int(STOP_HOUR);
     if (val) {
-	stop_hour = (int)val;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "stop_hour=%u", (uint)val);
+    	stop_hour = (int)val;
+    	APP_LOG(APP_LOG_LEVEL_DEBUG, "stop_hour=%u", (uint)val);
     }
+
     val = persist_read_int(STOP_MINUTE);
     if (val) {
-	stop_min = (int)val;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "stop_min=%u", (uint)val);
+    	stop_min = (int)val;
+    	APP_LOG(APP_LOG_LEVEL_DEBUG, "stop_min=%u", (uint)val);
     }
 }
 
@@ -363,7 +352,6 @@ int main(void) {
     AppLaunchReason reason;
     WakeupId id = 0;
     int32_t cookie;
-
     reason = launch_reason();
 
     if (reason == APP_LAUNCH_WAKEUP) {
