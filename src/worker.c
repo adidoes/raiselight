@@ -1,6 +1,7 @@
 #include <pebble_worker.h>
 
 void light_enable(bool enable);
+void light_enable_interaction();
 
 bool auto_backlight = false;
 bool light_on = false;
@@ -35,8 +36,9 @@ void handle_accel(AccelData *data, uint32_t num_samples) {
 
     if (watch_level_start != 0 && (time(0L) - watch_level_start) > 0) {
     	light_enable(true);
+        // light_enable_interaction();
     	light_on = true;
-    	app_timer_register(5000, light_callback, NULL);
+    	app_timer_register(2000, light_callback, NULL);
     	watch_level_start = 0;
     }
 }

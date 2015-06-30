@@ -12,19 +12,21 @@
 #define HOURS (60 * MINUTES)
 #define DAYS (24 * HOURS)
 
-static Window *window;
-static TextLayer *text_layer;
-
-GFont my_font;
 #define FONT_HEIGHT 30
 #define FONT_WIDTH 30
+#define TIME_SELECT_HOURS 1
+#define TIME_SELECT_MINUTES 2
+#define TIME_START 0
+#define TIME_STOP 1
+#define num_top_menu_sections 1
 
-static Window *top_menu_window;
+static Window *window;
+
 SimpleMenuLayer *top_menu_layer;
 
 void top_menu_callback(int index, void *context);
-const SimpleMenuItem top_menu_items[] = {
-    {"Toggle backlight", NULL, NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
+static SimpleMenuItem top_menu_items[] = {
+    {"Light off", "Toggle raise for light", NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
     {"Set Start", NULL, NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
     {"Set Stop", NULL, NULL, (SimpleMenuLayerSelectCallback)top_menu_callback},
 };
@@ -35,20 +37,15 @@ const SimpleMenuSection top_menu_sections = {
     .items=top_menu_items,
     .num_items=num_top_menu_items
 };
-#define num_top_menu_sections 1
 
 Window *time_window=NULL;
 TextLayer *time_layer=NULL;
 
 char time_select_text[30];
 int time_select_pointer;
-#define TIME_SELECT_HOURS 1
-#define TIME_SELECT_MINUTES 2
 int time_select_hours;
 int time_select_minutes;
 int time_setting;
-#define TIME_START  0
-#define TIME_STOP   1
 char *which[2] = {"start", "stop"};
 int start_hour;
 int start_min;
@@ -57,7 +54,7 @@ int stop_min;
 WakeupId start_alarm_id;
 WakeupId stop_alarm_id;
 
-void schedule_wakeup (WakeupId *alarm_id, int hour, int min, int which, int which_mem) {
+void schedule_wakeup(WakeupId *alarm_id, int hour, int min, int which, int which_mem) {
     time_t now;
     struct tm *now_tick;
     time_t alarm_time;
@@ -75,7 +72,7 @@ void schedule_wakeup (WakeupId *alarm_id, int hour, int min, int which, int whic
     persist_write_int(which_mem, (uint32_t)(*alarm_id));
 }
 
-void save_and_initiate_timer (int which) {
+void save_and_initiate_timer(int which) {
     if (which == TIME_START) {
     	persist_write_int(START_HOUR, (uint32_t)start_hour);
     	persist_write_int(START_MINUTE, (uint32_t)start_min);
@@ -87,7 +84,7 @@ void save_and_initiate_timer (int which) {
     }
 }
 
-void format_time (void) {
+void format_time(void) {
     snprintf(time_select_text, sizeof(time_select_text),
              "Setting\n%s\n%02u:%02u",
              which[time_setting],
@@ -172,7 +169,7 @@ static void time_config_provider(void *context) {
     window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_time_handler);
 }
 
-void set_time (int which) {
+void set_time(int which) {
 
     if (!time_window) {
     	time_window = window_create();
@@ -182,7 +179,6 @@ void set_time (int which) {
     	time_layer = text_layer_create(GRect(0, 0, 144, 168));
     }
 
-    text_layer_set_font(time_layer, my_font);
     text_layer_set_text_alignment(time_layer, GTextAlignmentCenter);
     layer_add_child(window_get_root_layer(time_window), (Layer *)time_layer);
 
@@ -197,7 +193,7 @@ void set_time (int which) {
     window_stack_push(time_window, true);
 }
 
-void top_menu_callback (int index, void *context) {
+void top_menu_callback(int index, void *context) {
     app_log(APP_LOG_LEVEL_WARNING,
             __FILE__,
             __LINE__,
@@ -206,10 +202,14 @@ void top_menu_callback (int index, void *context) {
     switch (index) {
         case 0: // toggle auto-backlight
         	if (app_worker_is_running()) {
-        	    text_layer_set_text(text_layer, "Light off");
+                app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "Lights off");
+        	    top_menu_items[index].title = "Light off";
+                layer_mark_dirty(simple_menu_layer_get_layer(top_menu_layer));
         	    app_worker_kill();
         	} else {
-        	    text_layer_set_text(text_layer, "Light on");
+                app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "Lights on");
+        	    top_menu_items[index].title = "Light on";
+                layer_mark_dirty(simple_menu_layer_get_layer(top_menu_layer));
         	    app_worker_launch();
         	}
         	break;
@@ -220,84 +220,31 @@ void top_menu_callback (int index, void *context) {
         	set_time(TIME_STOP);
         	return;
     }
-
-    window_stack_pop(true);
-}
-
-static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-    app_log(APP_LOG_LEVEL_WARNING,
-            __FILE__,
-            __LINE__,
-            "Top Click handler");
-
-    window_stack_push(top_menu_window, true);
-    simple_menu_layer_set_selected_index(top_menu_layer, 0 /* toggle */, false);
-}
-
-static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-    app_worker_launch();
-    text_layer_set_text(text_layer, "Light on");
-}
-
-static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-    app_worker_kill();
-    text_layer_set_text(text_layer, "Light off");
-}
-
-static void click_config_provider(void *context) {
-    window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
-    window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
-    window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
 
 static void window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
     GRect bounds = layer_get_bounds(window_layer);
 
-    text_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, bounds.size.h } });
-    text_layer_set_font(text_layer, my_font);
-    text_layer_set_text(text_layer, "Up to enable, Middle menu, down to disable");
-    // text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
-    text_layer_set_overflow_mode(text_layer, GTextOverflowModeWordWrap);
-    layer_add_child(window_layer, text_layer_get_layer(text_layer));
+    if (app_worker_is_running()) {
+        top_menu_items[0].title = "Light on";
+    } else {
+        top_menu_items[0].title = "Light off";
+    }
+
+    top_menu_layer = simple_menu_layer_create(layer_get_frame(window_layer), window, &top_menu_sections, num_top_menu_sections, NULL);
+    #ifdef PBL_COLOR
+        menu_layer_set_normal_colors(simple_menu_layer_get_menu_layer(top_menu_layer), GColorBlack, GColorWhite);
+        menu_layer_set_highlight_colors(simple_menu_layer_get_menu_layer(top_menu_layer), GColorGreen, GColorBlack);
+    #endif
+    layer_add_child(window_layer, simple_menu_layer_get_layer(top_menu_layer));
 }
 
 static void window_unload(Window *window) {
-    text_layer_destroy(text_layer);
+    simple_menu_layer_destroy(top_menu_layer);
 }
 
-static void init(void) {
-    window = window_create();
-    window_set_click_config_provider(window, click_config_provider);
-    window_set_window_handlers(window, (WindowHandlers) {
-    	.load = window_load,
-    	.unload = window_unload,
-    });
-    const bool animated = true;
-
-    Layer *window_layer = window_get_root_layer(window);
-    GRect bounds = layer_get_bounds(window_layer);
-
-    text_layer = text_layer_create((GRect) {
-        .origin = { 0, 0 },
-        .size = { bounds.size.w, bounds.size.h }
-    });
-
-    my_font = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-
-    top_menu_window = window_create();
-    top_menu_layer = simple_menu_layer_create(layer_get_frame(window_layer), top_menu_window,
-                                              &top_menu_sections, num_top_menu_sections, NULL);
-    layer_add_child(window_get_root_layer(top_menu_window), simple_menu_layer_get_layer(top_menu_layer));
-
-    window_stack_push(window, animated);
-}
-
-static void deinit(void) {
-    window_destroy(window);
-}
-
-void read_alarm_data (void) {
+void read_alarm_data(void) {
     uint32_t val;
 
     val = persist_read_int(START_ALARM);
@@ -336,7 +283,7 @@ void read_alarm_data (void) {
     }
 }
 
-void handle_wakeup (WakeupId id, int32_t cookie) {
+void handle_wakeup(WakeupId id, int32_t cookie) {
     if (cookie == TIME_START) {
     	app_worker_launch();
     	wakeup_cancel(start_alarm_id);
@@ -346,6 +293,22 @@ void handle_wakeup (WakeupId id, int32_t cookie) {
     	wakeup_cancel(stop_alarm_id);
     	schedule_wakeup(&stop_alarm_id, stop_hour, stop_min, TIME_STOP, STOP_ALARM);
     }
+}
+
+static void init(void) {
+    window = window_create();
+    window_set_window_handlers(window, (WindowHandlers) {
+    	.load = window_load,
+    	.unload = window_unload,
+    });
+    #ifdef PBL_COLOR
+        window_set_background_color(window, GColorBlack);
+    #endif
+    window_stack_push(window, true);
+}
+
+static void deinit(void) {
+    window_destroy(window);
 }
 
 int main(void) {
